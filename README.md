@@ -4,6 +4,16 @@ TODO: write proper readme.
 
 This is the project: https://twitter.com/oroce/status/939961381331329029
 
+# UI
+
+The design can be accessed in figma: https://www.figma.com/file/CwikCf6WnkNAFd8NSSdeDFGO/nextion-2.4
+
+The assets for the design can be found in the `assets` directory.
+
+# HMI
+
+The HMI for the Nextion display can be found the `assets` directory.
+
 # Starting
 
 ## ESP code changes
