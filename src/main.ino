@@ -235,7 +235,6 @@ void callback(char *topic, byte *payload, unsigned int length)
 }
 
 void render() {
-    Serial.println("render");
     myNextion.setComponentText("t0", String(state.bedroomTemperature, 1));
     myNextion.setComponentText("t3", String(state.bedroomHumidity, 1));
     myNextion.setComponentText("t1", String(state.livingroomTemperature, 1));
@@ -243,8 +242,6 @@ void render() {
     myNextion.setComponentText("t2", String(state.loggiaTemperature));
     myNextion.setComponentText("t5", String(state.loggiaHumidity, 1));
     myNextion.setComponentText("t6", state.frontdoorStatus);
-    Serial.print("Is wifi connected: ");
-    Serial.println(state.isWifiConnected);
     if (state.isWifiConnected) {
         myNextion.sendCommand("p1.pic=2");
     } else {
