@@ -5,7 +5,8 @@
 #include <ArduinoJson.h>
 #include <SoftwareSerial.h>
 #include <Nextion.h>
-#include <FS.h>    
+#include <FS.h>
+#include <types.h>
 String mqttClientId = String("ESP8266Client-") + ESP.getChipId();
 char *mqttServer = ""; // new char;
 uint16_t mqttPort = 0;
@@ -21,6 +22,18 @@ PubSubClient mqttClient(wifiClient);
 SoftwareSerial nextion(13, 14);// Nextion TX to pin 2 and RX to pin 3 of Arduino
 
 Nextion myNextion(nextion, 9600); //create a Nextion object named myNextion using the nextion serial port @ 9600bps
+
+State state = {
+    false, // wifi
+    false, // mqtt
+    0.00,  // broom temp
+    0.00,  // broom humidity
+    0.00,  // lroom temp
+    0.00,  // lroom humidty
+    0.00,  // loggia temp
+    0.00,  // loggia humidity
+    "n/a"  // frontdoor
+};
 void setup()
 {
     Serial.begin(9600);
@@ -61,17 +74,20 @@ void setup()
     } else {
         Serial.println("failed to mount FS");
     }
+    render();
 }
 
 void loop()
 {
     connectWiFi();
-
+    render();
     if (!mqttClient.connected())
     {
         reconnect();
+        render();
     }
     mqttClient.loop();
+    render();
     delay(1000);
 }
 void reconnect()
@@ -97,6 +113,7 @@ void reconnect()
             // Once connected, publish an announcement...
             //mqttClient.publish(statusTopic, "online");
             // ... and resubscribe
+            state.isMQTTConnected = true;
             mqttClient.publish("nextion/request-state", "on");
             boolean subscribed = mqttClient.subscribe(listenToTopic);
             if (subscribed) {
@@ -107,6 +124,7 @@ void reconnect()
         }
         else
         {
+            state.isMQTTConnected = false;
             Serial.print(" failed, rc=");
             Serial.print(mqttClient.state());
             Serial.println(" try again in 5 seconds");
@@ -120,9 +138,10 @@ void connectWiFi()
 {
     if (WiFi.status() == WL_CONNECTED)
     {
+        state.isWifiConnected = true;
         return;
     }
-
+    state.isWifiConnected = false;
     WiFi.mode(WIFI_STA);
 
     // Start SmartConfig if necessary
@@ -168,9 +187,11 @@ void connectWiFi()
             delay(3000);
         }
     }
+    state.isWifiConnected = true;
     Serial.println("Ok");
 
     Serial.println(String("My IP: ") + WiFi.localIP().toString());
+
     delay(3000);
 }
 
@@ -196,20 +217,14 @@ void callback(char *topic, byte *payload, unsigned int length)
         JSONBuffer.clear();
         return;
     }
-    String bedroomTemp = String((float)parsed["bedroom-temperature"], 1);
-    String bedroomHumidity = String((float)parsed["bedroom-humidity"], 1);
-    String livingRoomTemp = String((float)parsed["living-room-temperature"], 1);
-    String livingRoomHumidity = String((float)parsed["living-room-humidity"], 1);
-    String loggiaTemp = String((float)parsed["loggia-temperature"], 1);
-    String loggiaHumidity = String((float)parsed["loggia-humidity"], 1);
-    //char* frontDoorStatus = parsed["frontdoor"];
-    myNextion.setComponentText("t0", bedroomTemp);
-    myNextion.setComponentText("t3", bedroomHumidity);
-    myNextion.setComponentText("t1", livingRoomTemp);
-    myNextion.setComponentText("t4", livingRoomHumidity);
-    myNextion.setComponentText("t2", loggiaTemp);
-    myNextion.setComponentText("t5", loggiaHumidity);
-    myNextion.setComponentText("t6", parsed["frontdoor"]);
+    state.bedroomTemperature = (float)parsed["bedroom-temperature"];
+    state.bedroomHumidity = (float)parsed["bedroom-humidity"];
+    state.livingroomTemperature = (float)parsed["living-room-temperature"];
+    state.livingroomHumidity = (float)parsed["living-room-humidity"];
+    state.loggiaTemperature = (float)parsed["loggia-temperature"];
+    state.loggiaHumidity = (float)parsed["loggia-humidity"];
+    state.frontdoorStatus = parsed["frontdoor"];
+
     JSONBuffer.clear();
     /*Serial.println("bedroom temp:" + String(bedroomTemp, 1));
     Serial.println("bedroom humidity:" + String(bedroomHumidity, 1));
@@ -217,4 +232,28 @@ void callback(char *topic, byte *payload, unsigned int length)
     Serial.println("livingroom humidity:" + String(livingRoomHumidity, 1));
     Serial.println("loggia temp:" + String(loggiaTemp, 1));
     Serial.println("loggia humidity:" + String(loggiaHumidity, 1));*/
+}
+
+void render() {
+    Serial.println("render");
+    myNextion.setComponentText("t0", String(state.bedroomTemperature, 1));
+    myNextion.setComponentText("t3", String(state.bedroomHumidity, 1));
+    myNextion.setComponentText("t1", String(state.livingroomTemperature, 1));
+    myNextion.setComponentText("t4", String(state.livingroomHumidity, 1));
+    myNextion.setComponentText("t2", String(state.loggiaTemperature));
+    myNextion.setComponentText("t5", String(state.loggiaHumidity, 1));
+    myNextion.setComponentText("t6", state.frontdoorStatus);
+    Serial.print("Is wifi connected: ");
+    Serial.println(state.isWifiConnected);
+    if (state.isWifiConnected) {
+        myNextion.sendCommand("p1.pic=2");
+    } else {
+        myNextion.sendCommand("p1.pic=1");
+    }
+
+    if (state.isMQTTConnected) {
+        myNextion.sendCommand("p2.pic=4");
+    } else {
+        myNextion.sendCommand("p2.pic=3");
+    }
 }
