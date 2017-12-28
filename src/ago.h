@@ -21,8 +21,10 @@ Unit units[6] = {
 
 String format(long diff, long divisor, String unit, String prev) {
   long val = floor(diff / divisor);
-  String prefix = val <= 1 ? prev : String(val, 1);
-  return prefix + " " + String(unit) + "s ago";
+  if (val <= 1) {
+    return prev;
+  }
+  return String(val) + " " + String(unit) + "s ago";
 }
 
 String ago(long diff) {
