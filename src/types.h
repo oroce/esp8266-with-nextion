@@ -8,4 +8,5 @@ struct State {
   float loggiaTemperature;
   float loggiaHumidity;
   const char* frontdoorStatus;
+  unsigned long updatedAt;
 };

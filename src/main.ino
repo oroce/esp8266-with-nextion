@@ -7,6 +7,7 @@
 #include <Nextion.h>
 #include <FS.h>
 #include <types.h>
+#include <ago.h>
 String mqttClientId = String("ESP8266Client-") + ESP.getChipId();
 char *mqttServer = ""; // new char;
 uint16_t mqttPort = 0;
@@ -32,7 +33,8 @@ State state = {
     0.00,  // lroom humidty
     0.00,  // loggia temp
     0.00,  // loggia humidity
-    "n/a"  // frontdoor
+    "n/a", // frontdoor
+    NULL   // updatedAt
 };
 void setup()
 {
@@ -224,7 +226,7 @@ void callback(char *topic, byte *payload, unsigned int length)
     state.loggiaTemperature = (float)parsed["loggia-temperature"];
     state.loggiaHumidity = (float)parsed["loggia-humidity"];
     state.frontdoorStatus = parsed["frontdoor"];
-
+    state.updatedAt = millis();
     JSONBuffer.clear();
     /*Serial.println("bedroom temp:" + String(bedroomTemp, 1));
     Serial.println("bedroom humidity:" + String(bedroomHumidity, 1));
@@ -235,6 +237,10 @@ void callback(char *topic, byte *payload, unsigned int length)
 }
 
 void render() {
+    String updatedAt = "waiting for sync";
+    if (state.updatedAt != NULL) {
+        updatedAt = ago(millis() - state.updatedAt);
+    }
     myNextion.setComponentText("t0", String(state.bedroomTemperature, 1));
     myNextion.setComponentText("t3", String(state.bedroomHumidity, 1));
     myNextion.setComponentText("t1", String(state.livingroomTemperature, 1));
@@ -242,6 +248,7 @@ void render() {
     myNextion.setComponentText("t2", String(state.loggiaTemperature));
     myNextion.setComponentText("t5", String(state.loggiaHumidity, 1));
     myNextion.setComponentText("t6", state.frontdoorStatus);
+    myNextion.setComponentText("t7", updatedAt);
     if (state.isWifiConnected) {
         myNextion.sendCommand("p1.pic=2");
     } else {
