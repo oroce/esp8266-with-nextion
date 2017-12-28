@@ -116,7 +116,6 @@ void reconnect()
             //mqttClient.publish(statusTopic, "online");
             // ... and resubscribe
             state.isMQTTConnected = true;
-            mqttClient.publish("nextion/request-state", "on");
             boolean subscribed = mqttClient.subscribe(listenToTopic);
             if (subscribed) {
                 Serial.println("subscribed");

@@ -41,21 +41,29 @@ automation:
   - alias: state sync for nextion
     hide_entity: True
     trigger:
-      - platform: mqtt
-        topic: nextion/request-state
       - platform: state
         entity_id: sensor.humidity_158d000153196d, sensor.temperature_158d000153196d, sensor.temperature_158d0001824749,sensor.humidity_158d0001824749,  sensor.temperature_158d0001823f4a,sensor.humidity_158d0001823f4a, sensor.frontdoor_status
     action:
       service: mqtt.publish
       data_template:
         topic: "nextion/reply-state"
-        payload: "{\"bedroom-humidity\": {{ states.sensor.humidity_158d000153196d.state | string }}, \"bedroom-temperature\": {{ states.sensor.temperature_158d000153196d.state | string }}, \"living-room-temperature\": {{ states.sensor.temperature_158d0001824749.state | string }}, \"living-room-humidity\": {{ states.sensor.humidity_158d0001824749.state | string }}, \"loggia-temperature\": {{ states.sensor.temperature_158d0001823f4a.state | string }}, \"loggia-humidity\": {{ states.sensor.humidity_158d0001823f4a.state | string }}, \"frontdoor\": \"{{ states.sensor.frontdoor_status.state | string }}\" }"
+        retain: True
+        payload: >
+          {
+            "bedroom-humidity": {{ states.sensor.humidity_158d000153196d.state | string }},
+            "bedroom-temperature": {{ states.sensor.temperature_158d000153196d.state | string }},
+            "living-room-temperature": {{ states.sensor.temperature_158d0001824749.state | string }},
+            "living-room-humidity": {{ states.sensor.humidity_158d0001824749.state | string }},
+            "loggia-temperature": {{ states.sensor.temperature_158d0001823f4a.state | string }},
+            "loggia-humidity": {{ states.sensor.humidity_158d0001823f4a.state | string }},
+            "frontdoor": "{{ states.sensor.frontdoor_status.state | string }}"
+           }
 ```
 
 
 The above configuration will publish state to `nextion/reply-state` topic when
 - any of the sensors' state changed
-- the esp8266 boots up (which triggers a new message in `nextion/request-state` topic)
+- thankfully to `retain`, mqtt will store the last message, so as the esp8266 boots up, it will automatically receive the latest state
 
 The content of the message which gets published to `nextion/reply-state` is for me:
 
